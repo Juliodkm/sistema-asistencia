@@ -4,7 +4,7 @@ from app import db
 from app.models import AttendanceRecord, User
 from app.admin import admin_bp
 from functools import wraps
-from datetime import datetime
+from datetime import datetime, timedelta
 
 def admin_required(f):
     @wraps(f)
@@ -79,7 +79,6 @@ def add_user():
 def edit_user(user_id):
     user = User.query.get_or_404(user_id)
     if request.method == 'POST':
-        # Check for uniqueness if username or email has changed
         new_username = request.form.get('username')
         if user.username != new_username and User.query.filter_by(username=new_username).first():
             flash('El nombre de usuario ya existe.', 'danger')
@@ -120,7 +119,6 @@ def edit_user(user_id):
 @admin_required
 def delete_user(user_id):
     user = User.query.get_or_404(user_id)
-    # Optional: Add a check to prevent admin from deleting themselves
     if user.id == current_user.id:
         flash('No puedes eliminar tu propia cuenta.', 'danger')
         return redirect(url_for('admin.list_users'))
@@ -129,3 +127,32 @@ def delete_user(user_id):
     db.session.commit()
     flash('Usuario eliminado correctamente.', 'success')
     return redirect(url_for('admin.list_users'))
+
+# Reports Module
+@admin_bp.route('/reports', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def reports():
+    records = []
+    start_date_str = request.form.get('start_date')
+    end_date_str = request.form.get('end_date')
+
+    if request.method == 'POST' and start_date_str and end_date_str:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d') + timedelta(days=1)
+
+        records = db.session.query(AttendanceRecord, User).join(
+            User, AttendanceRecord.user_id == User.id
+        ).filter(
+            AttendanceRecord.check_in_time >= start_date,
+            AttendanceRecord.check_in_time < end_date
+        ).order_by(AttendanceRecord.check_in_time.desc()).all()
+        
+        if not records:
+            flash('No se encontraron registros en el rango de fechas seleccionado.', 'info')
+
+    return render_template('admin/reports.html', 
+                           records=records, 
+                           title='Reportes de Asistencia', 
+                           start_date=start_date_str, 
+                           end_date=end_date_str)
