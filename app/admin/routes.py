@@ -4,6 +4,7 @@ from app import db
 from app.models import AttendanceRecord, User
 from app.admin import admin_bp
 from functools import wraps
+from datetime import datetime
 
 def admin_required(f):
     @wraps(f)
@@ -39,6 +40,10 @@ def add_user():
         role = request.form.get('role')
         first_name = request.form.get('first_name')
         last_name = request.form.get('last_name')
+        birth_date_str = request.form.get('birth_date')
+        phone_number = request.form.get('phone_number')
+        area = request.form.get('area')
+        department = request.form.get('department')
 
         if User.query.filter_by(username=username).first():
             flash('El nombre de usuario ya existe.', 'danger')
@@ -47,12 +52,18 @@ def add_user():
             flash('El correo electrónico ya está en uso.', 'danger')
             return redirect(url_for('admin.add_user'))
 
+        birth_date = datetime.strptime(birth_date_str, '%Y-%m-%d').date() if birth_date_str else None
+
         new_user = User(
             username=username,
             email=email,
             role=role,
             first_name=first_name,
-            last_name=last_name
+            last_name=last_name,
+            birth_date=birth_date,
+            phone_number=phone_number,
+            area=area,
+            department=department
         )
         new_user.set_password(password)
         db.session.add(new_user)
@@ -68,27 +79,33 @@ def add_user():
 def edit_user(user_id):
     user = User.query.get_or_404(user_id)
     if request.method == 'POST':
-        username = request.form.get('username')
-        email = request.form.get('email')
-        role = request.form.get('role')
-        first_name = request.form.get('first_name')
-        last_name = request.form.get('last_name')
-        password = request.form.get('password')
-
         # Check for uniqueness if username or email has changed
-        if user.username != username and User.query.filter_by(username=username).first():
+        new_username = request.form.get('username')
+        if user.username != new_username and User.query.filter_by(username=new_username).first():
             flash('El nombre de usuario ya existe.', 'danger')
             return redirect(url_for('admin.edit_user', user_id=user_id))
-        if user.email != email and User.query.filter_by(email=email).first():
+        
+        new_email = request.form.get('email')
+        if user.email != new_email and User.query.filter_by(email=new_email).first():
             flash('El correo electrónico ya está en uso.', 'danger')
             return redirect(url_for('admin.edit_user', user_id=user_id))
 
-        user.username = username
-        user.email = email
-        user.role = role
-        user.first_name = first_name
-        user.last_name = last_name
+        user.username = new_username
+        user.email = new_email
+        user.role = request.form.get('role')
+        user.first_name = request.form.get('first_name')
+        user.last_name = request.form.get('last_name')
+        user.phone_number = request.form.get('phone_number')
+        user.area = request.form.get('area')
+        user.department = request.form.get('department')
         
+        birth_date_str = request.form.get('birth_date')
+        if birth_date_str:
+            user.birth_date = datetime.strptime(birth_date_str, '%Y-%m-%d').date()
+        else:
+            user.birth_date = None
+
+        password = request.form.get('password')
         if password:
             user.set_password(password)
             
