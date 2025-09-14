@@ -3,9 +3,12 @@ from app import db
 from app.auth import bp
 from app.models import User
 from app.auth.email import send_password_reset_email
+from flask_login import login_user, logout_user, current_user
 
 @bp.route('/register', methods=['GET', 'POST'])
 def register():
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard.dashboard'))
     if request.method == 'POST':
         username = request.form['username']
         email = request.form['email']
@@ -39,11 +42,28 @@ def register():
 
 @bp.route('/login', methods=['GET', 'POST'])
 def login():
-    # Login logic will be added here
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard.dashboard'))
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        user = User.query.filter_by(username=username).first()
+        if user is None or not user.check_password(password):
+            flash('Nombre de usuario o contraseña inválidos', 'danger')
+            return redirect(url_for('auth.login'))
+        login_user(user, remember=True)
+        return redirect(url_for('dashboard.dashboard'))
     return render_template('auth/login.html', title='Iniciar Sesión')
+
+@bp.route('/logout')
+def logout():
+    logout_user()
+    return redirect(url_for('auth.login'))
 
 @bp.route('/reset_password_request', methods=['GET', 'POST'])
 def reset_password_request():
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard.dashboard'))
     if request.method == 'POST':
         email = request.form['email']
         user = User.query.filter_by(email=email).first()
@@ -55,6 +75,8 @@ def reset_password_request():
 
 @bp.route('/reset_password/<token>', methods=['GET', 'POST'])
 def reset_password(token):
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard.dashboard'))
     user = User.verify_reset_password_token(token)
     if not user:
         flash('El token es inválido o ha expirado.', 'danger')

@@ -1,0 +1,46 @@
+{% extends "admin/dashboard.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="h3 mb-3">Editar Usuario: {{ user.username }}</h1>
+
+    <div class="card">
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('admin.edit_user', user_id=user.id) }}">
+                <div class="mb-3">
+                    <label for="username" class="form-label">Nombre de Usuario</label>
+                    <input type="text" class="form-control" id="username" name="username" value="{{ user.username }}" required>
+                </div>
+                <div class="mb-3">
+                    <label for="email" class="form-label">Email</label>
+                    <input type="email" class="form-control" id="email" name="email" value="{{ user.email }}" required>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="first_name" class="form-label">Nombre</label>
+                        <input type="text" class="form-control" id="first_name" name="first_name" value="{{ user.first_name or '' }}">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="last_name" class="form-label">Apellido</label>
+                        <input type="text" class="form-control" id="last_name" name="last_name" value="{{ user.last_name or '' }}">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="role" class="form-label">Rol</label>
+                    <select class="form-select" id="role" name="role">
+                        <option value="employee" {% if user.role == 'employee' %}selected{% endif %}>Empleado</option>
+                        <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Administrador</option>
+                    </select>
+                </div>
+                <p class="form-text">Deje la contraseña en blanco para no cambiarla.</p>
+                <div class="mb-3">
+                    <label for="password" class="form-label">Nueva Contraseña (Opcional)</label>
+                    <input type="password" class="form-control" id="password" name="password">
+                </div>
+                <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                <a href="{{ url_for('admin.list_users') }}" class="btn btn-secondary">Cancelar</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

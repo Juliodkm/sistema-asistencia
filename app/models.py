@@ -1,11 +1,16 @@
-from app import db
+from app import db, login
 from datetime import datetime, timezone
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import Date
 from flask import current_app
+from flask_login import UserMixin
 import jwt
 
-class User(db.Model):
+@login.user_loader
+def load_user(id):
+    return db.session.get(User, int(id))
+
+class User(UserMixin, db.Model):
     __tablename__ = 'users'
     
     id = db.Column(db.Integer, primary_key=True)
