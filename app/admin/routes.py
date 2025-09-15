@@ -4,7 +4,8 @@ from app import db
 from app.models import AttendanceRecord, User
 from app.admin import admin_bp
 from functools import wraps
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
+from sqlalchemy import func
 
 def admin_required(f):
     @wraps(f)
@@ -18,8 +19,24 @@ def admin_required(f):
 @login_required
 @admin_required
 def dashboard():
-    attendance_records = db.session.query(AttendanceRecord, User).join(User, AttendanceRecord.user_id == User.id).order_by(AttendanceRecord.check_in_time.desc()).all()
-    return render_template('admin/dashboard.html', records=attendance_records)
+    today = date.today()
+
+    # KPIs
+    total_employees = User.query.filter_by(role='employee').count()
+    present_today = AttendanceRecord.query.filter(func.date(AttendanceRecord.check_in_time) == today, AttendanceRecord.status != 'Vacaciones').count()
+    on_leave_today = AttendanceRecord.query.filter(func.date(AttendanceRecord.check_in_time) == today, AttendanceRecord.status == 'Vacaciones').count()
+    late_today = AttendanceRecord.query.filter(func.date(AttendanceRecord.check_in_time) == today, AttendanceRecord.status == 'Tarde').count()
+
+    # Recent activity
+    recent_records = db.session.query(AttendanceRecord, User).join(User, AttendanceRecord.user_id == User.id).order_by(AttendanceRecord.check_in_time.desc()).limit(10).all()
+    
+    return render_template('admin/dashboard.html', 
+                           title='Panel de Administrador',
+                           total_employees=total_employees,
+                           present_today=present_today,
+                           on_leave_today=on_leave_today,
+                           late_today=late_today,
+                           records=recent_records)
 
 # User Management Routes
 @admin_bp.route('/users')

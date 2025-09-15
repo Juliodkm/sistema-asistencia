@@ -43,16 +43,27 @@ def register():
 @bp.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
+        if current_user.role == 'admin':
+            return redirect(url_for('admin.dashboard'))
         return redirect(url_for('dashboard.dashboard'))
+        
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
         user = User.query.filter_by(username=username).first()
+        
         if user is None or not user.check_password(password):
             flash('Nombre de usuario o contraseña inválidos', 'danger')
             return redirect(url_for('auth.login'))
+            
         login_user(user, remember=True)
-        return redirect(url_for('dashboard.dashboard'))
+        
+        # Redirección basada en el rol del usuario
+        if user.role == 'admin':
+            return redirect(url_for('admin.dashboard'))
+        else:
+            return redirect(url_for('dashboard.dashboard'))
+            
     return render_template('auth/login.html', title='Iniciar Sesión')
 
 @bp.route('/logout')

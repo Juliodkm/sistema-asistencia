@@ -1,29 +1,135 @@
 {% extends 'admin/base.html' %}
 
 {% block admin_content %}
-    <h1 class="mb-4">Dashboard de Asistencia</h1>
-    <div class="card">
-        <div class="card-body">
-            <table class="table table-striped table-hover">
-                <thead class="thead-dark">
-                    <tr>
-                        <th scope="col">ID Registro</th>
-                        <th scope="col">Nombre de Usuario</th>
-                        <th scope="col">Hora de Entrada</th>
-                        <th scope="col">Hora de Salida</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for record, user in records %}
-                    <tr>
-                        <td>{{ record.id }}</td>
-                        <td>{{ user.username }}</td>
-                        <td>{{ record.check_in_time.strftime('%Y-%m-%d %H:%M:%S') }}</td>
-                        <td>{{ record.check_out_time.strftime('%Y-%m-%d %H:%M:%S') if record.check_out_time else 'N/A' }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+<div class="container-fluid p-4">
+    <h1 class="h2 mb-4">Centro de Mando</h1>
+
+    <!-- KPI Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total Empleados</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_employees }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-users fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Presentes Hoy</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ present_today }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-user-check fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Llegadas Tarde Hoy</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ late_today }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-clock fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">En Vacaciones Hoy</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ on_leave_today }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-plane-departure fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
+
+    <!-- Quick Actions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header">
+                    <h6 class="m-0 font-weight-bold text-primary">Acciones Rápidas</h6>
+                </div>
+                <div class="card-body text-center">
+                    <a href="{{ url_for('admin.list_users') }}" class="btn btn-lg btn-primary m-2">
+                        <i class="fas fa-users-cog mr-2"></i> Gestionar Usuarios
+                    </a>
+                    <a href="{{ url_for('admin.reports') }}" class="btn btn-lg btn-info m-2">
+                        <i class="fas fa-chart-bar mr-2"></i> Generar Reportes
+                    </a>
+                    <a href="#" class="btn btn-lg btn-secondary m-2 disabled" aria-disabled="true">
+                        <i class="fas fa-calendar-alt mr-2"></i> Gestionar Vacaciones (Próximamente)
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity Table -->
+    <div class="card shadow">
+        <div class="card-header">
+            <h6 class="m-0 font-weight-bold text-primary">Actividad Reciente</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th>Usuario</th>
+                            <th>Hora de Entrada</th>
+                            <th>Hora de Salida</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record, user in records %}
+                        <tr>
+                            <td>{{ user.username }}</td>
+                            <td>{{ record.check_in_time.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                            <td>{{ record.check_out_time.strftime('%Y-%m-%d %H:%M:%S') if record.check_out_time else 'N/A' }}</td>
+                            <td>
+                                <span class="badge {% if record.status == 'A Tiempo' %}bg-success{% elif record.status == 'Tarde' %}bg-warning{% else %}bg-info{% endif %}">
+                                    {{ record.status }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center">No hay actividad reciente.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
