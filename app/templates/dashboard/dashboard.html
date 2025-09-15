@@ -10,13 +10,15 @@
         h1 { color: #333; }
         h2 { color: #555; font-weight: normal; }
         .status { font-size: 1.2em; color: #007bff; margin: 20px 0; padding: 10px; border: 1px solid #007bff; border-radius: 4px; display: inline-block; }
-        .btn { display: inline-block; padding: 15px 30px; font-size: 18px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; text-align: center; text-decoration: none; }
+        .btn { display: inline-block; padding: 15px 30px; font-size: 18px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; text-align: center; text-decoration: none; margin-top: 10px; }
         .btn-checkout { background: #dc3545; }
+        .btn-lunch { background: #ffc107; color: #333; }
         .btn:disabled { background: #6c757d; cursor: not-allowed; }
         .flash-messages { list-style: none; padding: 0; margin: 20px 0 0 0; }
         .flash-messages li { padding: 10px; margin-bottom: 10px; border-radius: 4px; }
         .flash-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .flash-info { background: #cce5ff; color: #004085; border: 1px solid #b8daff; }
+        .flash-danger { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
     </style>
 </head>
 <body>
@@ -34,17 +36,43 @@
         {% endwith %}
 
         <h2>Tu estado de asistencia para hoy es:</h2>
-        <div class="status">{{ status }}</div>
-
-        <form action="{{ url_for('dashboard.mark_attendance') }}" method="POST">
-            {% if status == "No ha marcado" %}
-                <button type="submit" class="btn">Marcar Entrada</button>
-            {% elif status == "Entrada Marcada" %}
-                <button type="submit" class="btn btn-checkout">Marcar Salida</button>
+        <div class="status">
+            {% if record is none %}
+                No ha marcado
+            {% elif record.check_out_time is none %}
+                Entrada Marcada
             {% else %}
-                <button type="submit" class="btn" disabled>Jornada Finalizada</button>
+                Salida Marcada
             {% endif %}
-        </form>
+        </div>
+
+        {% if record is none %}
+            <form action="{{ url_for('dashboard.mark_attendance') }}" method="POST">
+                <button type="submit" class="btn">Marcar Entrada</button>
+            </form>
+        {% elif record.check_out_time is none %}
+            {# User has checked in, but not out #}
+
+            {% if record.lunch_start_time is none %}
+                <form action="{{ url_for('dashboard.mark_lunch') }}" method="POST" style="display: inline-block;">
+                    <button type="submit" class="btn btn-lunch">Iniciar Almuerzo</button>
+                </form>
+            {% elif record.lunch_end_time is none %}
+                <form action="{{ url_for('dashboard.mark_lunch') }}" method="POST" style="display: inline-block;">
+                    <button type="submit" class="btn btn-lunch">Finalizar Almuerzo</button>
+                </form>
+            {% endif %}
+
+            <form action="{{ url_for('dashboard.mark_attendance') }}" method="POST" style="display: inline-block;">
+                <button type="submit" class="btn btn-checkout" 
+                    {% if record.lunch_start_time and not record.lunch_end_time %}disabled{% endif %}>
+                    Marcar Salida
+                </button>
+            </form>
+
+        {% else %}
+            <button type="submit" class="btn" disabled>Jornada Finalizada</button>
+        {% endif %}
         
         <p style="margin-top: 30px;"><a href="{{ url_for('auth.logout') }}">Cerrar Sesión</a></p>
     </div>
