@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Reporte de Asistencia</title>
+    <style>
+        body { font-family: sans-serif; }
+        h1 { text-align: center; color: #333; }
+        p { text-align: center; color: #666; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+    </style>
+</head>
+<body>
+    <h1>Reporte de Asistencia</h1>
+    <p>Rango de Fechas: {{ start_date }} a {{ end_date }}</p>
+    <table>
+        <thead>
+            <tr>
+                <th>Usuario</th>
+                <th>Entrada</th>
+                <th>Inicio Almuerzo</th>
+                <th>Fin Almuerzo</th>
+                <th>Salida</th>
+                <th>Estado</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for record, user in records %}
+            <tr>
+                <td>{{ user.username }}</td>
+                <td>{{ record.check_in_time.strftime('%Y-%m-%d %H:%M:%S') if record.check_in_time else 'N/A' }}</td>
+                <td>{{ record.lunch_start_time.strftime('%H:%M:%S') if record.lunch_start_time else 'N/A' }}</td>
+                <td>{{ record.lunch_end_time.strftime('%H:%M:%S') if record.lunch_end_time else 'N/A' }}</td>
+                <td>{{ record.check_out_time.strftime('%Y-%m-%d %H:%M:%S') if record.check_out_time else 'N/A' }}</td>
+                <td>{{ record.status }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

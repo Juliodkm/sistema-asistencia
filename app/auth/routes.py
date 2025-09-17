@@ -1,4 +1,4 @@
-from flask import render_template, redirect, url_for, flash, request
+from flask import render_template, redirect, url_for, flash, request, session
 from app import db
 from app.auth import bp
 from app.models import User
@@ -57,6 +57,7 @@ def login():
             return redirect(url_for('auth.login'))
             
         login_user(user, remember=True)
+        session['role'] = user.role
         
         # Redirección basada en el rol del usuario
         if user.role == 'admin':

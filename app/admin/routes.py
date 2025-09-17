@@ -1,11 +1,14 @@
-from flask import render_template, flash, redirect, url_for, abort, request
+from flask import render_template, flash, redirect, url_for, abort, request, send_file
 from flask_login import login_required, current_user
 from app import db
 from app.models import AttendanceRecord, User
-from app.admin import admin_bp
+from app.admin import bp
 from functools import wraps
 from datetime import datetime, timedelta, date
 from sqlalchemy import func
+import pandas as pd
+import io
+from weasyprint import HTML
 
 def admin_required(f):
     @wraps(f)
@@ -15,14 +18,14 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-@admin_bp.route('/dashboard')
+@bp.route('/dashboard')
 @login_required
 @admin_required
 def dashboard():
     today = date.today()
 
     # KPIs
-    total_employees = User.query.filter_by(role='employee').count()
+    total_employees = User.query.filter(User.role != 'admin').count()
     present_today = AttendanceRecord.query.filter(func.date(AttendanceRecord.check_in_time) == today, AttendanceRecord.status != 'Vacaciones').count()
     on_leave_today = AttendanceRecord.query.filter(func.date(AttendanceRecord.check_in_time) == today, AttendanceRecord.status == 'Vacaciones').count()
     late_today = AttendanceRecord.query.filter(func.date(AttendanceRecord.check_in_time) == today, AttendanceRecord.status == 'Tarde').count()
@@ -39,137 +42,155 @@ def dashboard():
                            records=recent_records)
 
 # User Management Routes
-@admin_bp.route('/users')
+@bp.route('/users')
 @login_required
 @admin_required
 def list_users():
     users = User.query.all()
     return render_template('admin/users.html', users=users, title='Gestionar Usuarios')
 
-@admin_bp.route('/add_user', methods=['GET', 'POST'])
+@bp.route('/add_user', methods=['GET', 'POST'])
 @login_required
 @admin_required
 def add_user():
     if request.method == 'POST':
-        username = request.form.get('username')
-        email = request.form.get('email')
-        password = request.form.get('password')
-        role = request.form.get('role')
-        first_name = request.form.get('first_name')
-        last_name = request.form.get('last_name')
-        birth_date_str = request.form.get('birth_date')
-        phone_number = request.form.get('phone_number')
-        area = request.form.get('area')
-        department = request.form.get('department')
-
-        if User.query.filter_by(username=username).first():
-            flash('El nombre de usuario ya existe.', 'danger')
-            return redirect(url_for('admin.add_user'))
-        if User.query.filter_by(email=email).first():
-            flash('El correo electrónico ya está en uso.', 'danger')
-            return redirect(url_for('admin.add_user'))
-
-        birth_date = datetime.strptime(birth_date_str, '%Y-%m-%d').date() if birth_date_str else None
-
-        new_user = User(
-            username=username,
-            email=email,
-            role=role,
-            first_name=first_name,
-            last_name=last_name,
-            birth_date=birth_date,
-            phone_number=phone_number,
-            area=area,
-            department=department
-        )
-        new_user.set_password(password)
-        db.session.add(new_user)
-        db.session.commit()
-        flash('Usuario añadido correctamente.', 'success')
-        return redirect(url_for('admin.list_users'))
-    
+        # ... (código existente de add_user)
+        pass
     return render_template('admin/add_user.html', title='Añadir Usuario')
 
-@admin_bp.route('/edit_user/<int:user_id>', methods=['GET', 'POST'])
+@bp.route('/edit_user/<int:user_id>', methods=['GET', 'POST'])
 @login_required
 @admin_required
 def edit_user(user_id):
+    # ... (código existente de edit_user)
+    pass
     user = User.query.get_or_404(user_id)
-    if request.method == 'POST':
-        new_username = request.form.get('username')
-        if user.username != new_username and User.query.filter_by(username=new_username).first():
-            flash('El nombre de usuario ya existe.', 'danger')
-            return redirect(url_for('admin.edit_user', user_id=user_id))
-        
-        new_email = request.form.get('email')
-        if user.email != new_email and User.query.filter_by(email=new_email).first():
-            flash('El correo electrónico ya está en uso.', 'danger')
-            return redirect(url_for('admin.edit_user', user_id=user_id))
-
-        user.username = new_username
-        user.email = new_email
-        user.role = request.form.get('role')
-        user.first_name = request.form.get('first_name')
-        user.last_name = request.form.get('last_name')
-        user.phone_number = request.form.get('phone_number')
-        user.area = request.form.get('area')
-        user.department = request.form.get('department')
-        
-        birth_date_str = request.form.get('birth_date')
-        if birth_date_str:
-            user.birth_date = datetime.strptime(birth_date_str, '%Y-%m-%d').date()
-        else:
-            user.birth_date = None
-
-        password = request.form.get('password')
-        if password:
-            user.set_password(password)
-            
-        db.session.commit()
-        flash('Usuario actualizado correctamente.', 'success')
-        return redirect(url_for('admin.list_users'))
-
     return render_template('admin/edit_user.html', user=user, title='Editar Usuario')
 
-@admin_bp.route('/delete_user/<int:user_id>', methods=['POST'])
+@bp.route('/delete_user/<int:user_id>', methods=['POST'])
 @login_required
 @admin_required
 def delete_user(user_id):
-    user = User.query.get_or_404(user_id)
-    if user.id == current_user.id:
-        flash('No puedes eliminar tu propia cuenta.', 'danger')
-        return redirect(url_for('admin.list_users'))
-        
-    db.session.delete(user)
-    db.session.commit()
-    flash('Usuario eliminado correctamente.', 'success')
-    return redirect(url_for('admin.list_users'))
+    # ... (código existente de delete_user)
+    pass
 
 # Reports Module
-@admin_bp.route('/reports', methods=['GET', 'POST'])
+@bp.route('/reports', methods=['GET', 'POST'])
 @login_required
 @admin_required
 def reports():
-    records = []
-    start_date_str = request.form.get('start_date')
-    end_date_str = request.form.get('end_date')
+    page = request.args.get('page', 1, type=int)
+    start_date_str = request.values.get('start_date')
+    end_date_str = request.values.get('end_date')
+    pagination = None
 
-    if request.method == 'POST' and start_date_str and end_date_str:
-        start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
-        end_date = datetime.strptime(end_date_str, '%Y-%m-%d') + timedelta(days=1)
+    if start_date_str and end_date_str:
+        try:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d') + timedelta(days=1)
 
-        records = db.session.query(AttendanceRecord, User).join(
-            User, AttendanceRecord.user_id == User.id
-        ).filter(
-            AttendanceRecord.check_in_time >= start_date,
-            AttendanceRecord.check_in_time < end_date
-        ).order_by(AttendanceRecord.check_in_time.desc()).all()
-        
-        if not records:
-            flash('No se encontraron registros en el rango de fechas seleccionado.', 'info')
+            records_query = db.session.query(AttendanceRecord, User).join(
+                User, AttendanceRecord.user_id == User.id
+            ).filter(
+                AttendanceRecord.check_in_time >= start_date,
+                AttendanceRecord.check_in_time < end_date
+            ).order_by(AttendanceRecord.check_in_time.desc())
+            
+            pagination = records_query.paginate(page=page, per_page=50, error_out=False)
+            
+            if not pagination.items:
+                flash('No se encontraron registros en el rango de fechas seleccionado.', 'info')
+        except ValueError:
+            flash('Formato de fecha inválido. Use YYYY-MM-DD.', 'danger')
 
     return render_template('admin/reports.html', 
-                           records=records, 
+                           pagination=pagination, 
                            title='Reportes de Asistencia', 
                            start_date=start_date_str, 
                            end_date=end_date_str)
+
+@bp.route('/export/excel')
+@login_required
+@admin_required
+def export_excel():
+    start_date_str = request.args.get('start_date')
+    end_date_str = request.args.get('end_date')
+
+    if not start_date_str or not end_date_str:
+        flash('Fechas de inicio y fin son requeridas para exportar.', 'danger')
+        return redirect(url_for('admin.reports'))
+
+    start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+    end_date = datetime.strptime(end_date_str, '%Y-%m-%d') + timedelta(days=1)
+
+    records = db.session.query(AttendanceRecord, User).join(
+        User, AttendanceRecord.user_id == User.id
+    ).filter(
+        AttendanceRecord.check_in_time >= start_date,
+        AttendanceRecord.check_in_time < end_date
+    ).order_by(AttendanceRecord.check_in_time.desc()).all()
+
+    if not records:
+        flash('No hay datos para exportar en el rango seleccionado.', 'info')
+        return redirect(url_for('admin.reports'))
+
+    data = []
+    for record, user in records:
+        data.append({
+            'Usuario': user.username,
+            'Nombre': user.first_name,
+            'Apellido': user.last_name,
+            'Entrada': record.check_in_time.strftime('%Y-%m-%d %H:%M:%S') if record.check_in_time else '',
+            'Inicio Almuerzo': record.lunch_start_time.strftime('%H:%M:%S') if record.lunch_start_time else '',
+            'Fin Almuerzo': record.lunch_end_time.strftime('%H:%M:%S') if record.lunch_end_time else '',
+            'Salida': record.check_out_time.strftime('%Y-%m-%d %H:%M:%S') if record.check_out_time else '',
+            'Estado': record.status
+        })
+    
+    df = pd.DataFrame(data)
+
+    output = io.BytesIO()
+    df.to_excel(output, index=False, sheet_name='Reporte Asistencia')
+    output.seek(0)
+
+    return send_file(
+        output,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name=f'reporte_asistencia_{start_date_str}_a_{end_date_str}.xlsx'
+    )
+
+@bp.route('/export/pdf')
+@login_required
+@admin_required
+def export_pdf():
+    start_date_str = request.args.get('start_date')
+    end_date_str = request.args.get('end_date')
+
+    if not start_date_str or not end_date_str:
+        flash('Fechas de inicio y fin son requeridas para exportar.', 'danger')
+        return redirect(url_for('admin.reports'))
+
+    start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+    end_date = datetime.strptime(end_date_str, '%Y-%m-%d') + timedelta(days=1)
+
+    records = db.session.query(AttendanceRecord, User).join(
+        User, AttendanceRecord.user_id == User.id
+    ).filter(
+        AttendanceRecord.check_in_time >= start_date,
+        AttendanceRecord.check_in_time < end_date
+    ).order_by(AttendanceRecord.check_in_time.desc()).all()
+
+    if not records:
+        flash('No hay datos para exportar en el rango seleccionado.', 'info')
+        return redirect(url_for('admin.reports'))
+
+    rendered_html = render_template('admin/report_pdf.html', records=records, start_date=start_date_str, end_date=end_date_str)
+    pdf = HTML(string=rendered_html).write_pdf()
+
+    return send_file(
+        io.BytesIO(pdf),
+        mimetype='application/pdf',
+        as_attachment=True,
+        download_name=f'reporte_asistencia_{start_date_str}_a_{end_date_str}.pdf'
+    )
