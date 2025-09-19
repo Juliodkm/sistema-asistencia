@@ -4,6 +4,22 @@
 <div class="container">
     <h1 class="my-4">Gestionar Ausencias</h1>
 
+    {# Bloque para mostrar mensajes emergentes (flash messages) #}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flashes">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
     <!-- Formulario de Solicitud de Ausencia -->
     <div class="card mb-4">
         <div class="card-header">
@@ -80,5 +96,12 @@
             </div>
         </div>
     </div>
+
+    {# Botones de Navegación #}
+    <div class="mt-4">
+        <a href="{{ url_for('dashboard.dashboard') }}" class="btn btn-secondary">Volver al Dashboard</a>
+        <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-danger">Cerrar Sesión</a>
+    </div>
+
 </div>
 {% endblock %}
