@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="container-fluid mt-4">
     <h1 class="h3 mb-3">Generador de Reportes de Asistencia</h1>
 
     <div class="card mb-4">
@@ -9,7 +9,7 @@
             Filtrar y Exportar
         </div>
         <div class="card-body">
-            <form method="GET" action="{{ url_for('admin.reports') }}">
+            <form method="POST" action="{{ url_for('admin.reports') }}">
                 <div class="row align-items-end">
                     <div class="col-md-4">
                         <label for="start_date" class="form-label">Fecha de Inicio</label>
@@ -47,9 +47,46 @@
         {% endif %}
     {% endwith %}
 
+    {# --- Nueva Sección de Resumen --- #}
+    {% if summary_stats %}
+    <div class="card mb-4">
+        <div class="card-header">
+            Resumen por Empleado
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered table-hover">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>Usuario</th>
+                            <th>Días Trabajados</th>
+                            <th>Tardanzas</th>
+                            <th>Días Vacaciones</th>
+                            <th>Días Enfermedad</th>
+                            <th>Horas Trabajadas</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stat in summary_stats %}
+                        <tr>
+                            <td>{{ stat.username }}</td>
+                            <td>{{ stat.dias_trabajados }}</td>
+                            <td>{{ stat.total_tardanzas }}</td>
+                            <td>{{ stat.dias_vacaciones }}</td>
+                            <td>{{ stat.dias_enfermedad }}</td>
+                            <td>{{ "%.2f"|format(stat.horas_totales) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <div class="card">
         <div class="card-header">
-            Resultados del Reporte
+            Registro Detallado
         </div>
         <div class="card-body">
             {% if pagination and pagination.items %}

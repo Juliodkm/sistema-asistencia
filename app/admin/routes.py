@@ -155,28 +155,83 @@ def reports():
     start_date_str = request.values.get('start_date')
     end_date_str = request.values.get('end_date')
     pagination = None
+    summary_stats = {}
 
     if start_date_str and end_date_str:
         try:
-            start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
-            end_date = datetime.strptime(end_date_str, '%Y-%m-%d') + timedelta(days=1)
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            end_date_dt = datetime.combine(end_date, datetime.max.time()) # for range queries
 
+            # Query for detailed paginated view
             records_query = db.session.query(AttendanceRecord, User).join(
                 User, AttendanceRecord.user_id == User.id
             ).filter(
                 AttendanceRecord.check_in_time >= start_date,
-                AttendanceRecord.check_in_time < end_date
+                AttendanceRecord.check_in_time < end_date_dt
             ).order_by(AttendanceRecord.check_in_time.desc())
             
-            pagination = records_query.paginate(page=page, per_page=50, error_out=False)
-            
-            if not pagination.items:
+            pagination = records_query.paginate(page=page, per_page=20, error_out=False)
+
+            # --- Analysis Part ---
+            all_records = records_query.all()
+            if not all_records:
                 flash('No se encontraron registros en el rango de fechas seleccionado.', 'info')
+            else:
+                # Convert to DataFrame for analysis
+                data = [{
+                    'user_id': user.id,
+                    'username': user.username,
+                    'check_in': record.check_in_time,
+                    'check_out': record.check_out_time,
+                    'lunch_start': record.lunch_start_time,
+                    'lunch_end': record.lunch_end_time,
+                    'status': record.status
+                } for record, user in all_records]
+                df = pd.DataFrame(data)
+
+                # Calculate worked hours
+                df['work_duration'] = (df['check_out'] - df['check_in']).dt.total_seconds()
+                df['lunch_duration'] = (df['lunch_end'] - df['lunch_start']).dt.total_seconds().fillna(0)
+                df['worked_hours'] = (df['work_duration'] - df['lunch_duration']) / 3600
+
+                # Group for stats
+                summary = df.groupby(['user_id', 'username']).agg(
+                    dias_trabajados=('check_in', 'count'),
+                    total_tardanzas=('status', lambda x: (x == 'Tarde').sum()),
+                    horas_totales=('worked_hours', 'sum')
+                ).reset_index()
+
+                # Calculate leave days
+                leave_requests = LeaveRequest.query.filter(
+                    LeaveRequest.status == 'Aprobado',
+                    LeaveRequest.start_date <= end_date,
+                    LeaveRequest.end_date >= start_date
+                ).all()
+                
+                leave_summary = {}
+                for leave in leave_requests:
+                    # Calculate overlap with the selected date range
+                    overlap_start = max(leave.start_date, start_date)
+                    overlap_end = min(leave.end_date, end_date)
+                    if overlap_start <= overlap_end:
+                        days_on_leave = (overlap_end - overlap_start).days + 1
+                        if leave.user_id not in leave_summary:
+                            leave_summary[leave.user_id] = {'Vacaciones': 0, 'Enfermedad': 0, 'Permiso Personal': 0}
+                        leave_summary[leave.user_id][leave.leave_type] += days_on_leave
+
+                # Combine summaries
+                summary['dias_vacaciones'] = summary['user_id'].map(lambda x: leave_summary.get(x, {}).get('Vacaciones', 0))
+                summary['dias_enfermedad'] = summary['user_id'].map(lambda x: leave_summary.get(x, {}).get('Enfermedad', 0))
+                
+                summary_stats = summary.to_dict('records')
+
         except ValueError:
             flash('Formato de fecha inválido. Use YYYY-MM-DD.', 'danger')
 
     return render_template('admin/reports.html', 
                            pagination=pagination, 
+                           summary_stats=summary_stats,
                            title='Reportes de Asistencia', 
                            start_date=start_date_str, 
                            end_date=end_date_str)
