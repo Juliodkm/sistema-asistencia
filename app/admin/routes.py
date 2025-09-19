@@ -2,7 +2,7 @@ from flask import render_template, flash, redirect, url_for, abort, request, sen
 from flask_login import login_required, current_user
 from app import db
 from app.models import AttendanceRecord, User
-from app.admin import bp
+from app.admin import admin_bp as bp
 from functools import wraps
 from datetime import datetime, timedelta, date
 from sqlalchemy import func

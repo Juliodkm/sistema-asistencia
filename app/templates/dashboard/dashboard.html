@@ -53,6 +53,10 @@
             <button type="submit" class="btn" disabled>Jornada Finalizada</button>
         {% endif %}
         
+        <div class="mt-4">
+            <a href="{{ url_for('dashboard.leave') }}" class="btn btn-info">Gestionar Vacaciones</a>
+        </div>
+
         <p style="margin-top: 30px;"><a href="{{ url_for('auth.logout') }}">Cerrar Sesión</a></p>
     </div>
 {% endblock %}

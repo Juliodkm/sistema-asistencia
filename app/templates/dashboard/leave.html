@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1 class="my-4">Gestionar Ausencias</h1>
+
+    <!-- Formulario de Solicitud de Ausencia -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Nueva Solicitud de Ausencia</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" action="{{ url_for('dashboard.leave') }}">
+                <div class="form-row">
+                    <div class="form-group col-md-4">
+                        <label for="start_date">Fecha de Inicio</label>
+                        <input type="date" class="form-control" id="start_date" name="start_date" required>
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="end_date">Fecha de Fin</label>
+                        <input type="date" class="form-control" id="end_date" name="end_date" required>
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="leave_type">Tipo de Ausencia</label>
+                        <select class="form-control" id="leave_type" name="leave_type" required>
+                            <option value="Vacaciones">Vacaciones</option>
+                            <option value="Enfermedad">Enfermedad</option>
+                            <option value="Permiso Personal">Permiso Personal</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Enviar Solicitud</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Historial de Solicitudes -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Historial de Solicitudes</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="thead-light">
+                        <tr>
+                            <th scope="col">Fecha de Solicitud</th>
+                            <th scope="col">Tipo</th>
+                            <th scope="col">Fecha de Inicio</th>
+                            <th scope="col">Fecha de Fin</th>
+                            <th scope="col">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for request in requests %}
+                        <tr>
+                            <td>{{ request.request_date.strftime('%Y-%m-%d') }}</td>
+                            <td>{{ request.leave_type }}</td>
+                            <td>{{ request.start_date.strftime('%Y-%m-%d') }}</td>
+                            <td>{{ request.end_date.strftime('%Y-%m-%d') }}</td>
+                            <td>
+                                {% if request.status == 'Pendiente' %}
+                                    <span class="badge badge-warning">{{ request.status }}</span>
+                                {% elif request.status == 'Aprobado' %}
+                                    <span class="badge badge-success">{{ request.status }}</span>
+                                {% elif request.status == 'Rechazado' %}
+                                    <span class="badge badge-danger">{{ request.status }}</span>
+                                {% else %}
+                                    <span class="badge badge-secondary">{{ request.status }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center">No tienes solicitudes de ausencia.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

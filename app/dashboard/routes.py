@@ -1,7 +1,7 @@
-from flask import render_template, redirect, url_for, flash
+from flask import render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 from app.dashboard import bp
-from app.models import AttendanceRecord, User
+from app.models import AttendanceRecord, User, LeaveRequest
 from app import db
 from datetime import date, datetime, time
 from sqlalchemy import func
@@ -86,3 +86,37 @@ def mark_lunch():
 
     db.session.commit()
     return redirect(url_for('dashboard.dashboard'))
+
+@bp.route('/leave', methods=['GET', 'POST'])
+@login_required
+def leave():
+    if request.method == 'POST':
+        start_date_str = request.form.get('start_date')
+        end_date_str = request.form.get('end_date')
+        leave_type = request.form.get('leave_type')
+
+        if not start_date_str or not end_date_str or not leave_type:
+            flash('Todos los campos son obligatorios.', 'danger')
+            return redirect(url_for('dashboard.leave'))
+
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+
+        if end_date < start_date:
+            flash('La fecha de fin no puede ser anterior a la fecha de inicio.', 'danger')
+            return redirect(url_for('dashboard.leave'))
+
+        new_request = LeaveRequest(
+            user_id=current_user.id,
+            start_date=start_date,
+            end_date=end_date,
+            leave_type=leave_type,
+            status='Pendiente'
+        )
+        db.session.add(new_request)
+        db.session.commit()
+        flash('Solicitud de ausencia enviada con éxito.', 'success')
+        return redirect(url_for('dashboard.leave'))
+
+    leave_requests = LeaveRequest.query.filter_by(user_id=current_user.id).order_by(LeaveRequest.request_date.desc()).all()
+    return render_template('dashboard/leave.html', title='Gestionar Ausencias', requests=leave_requests)
