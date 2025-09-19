@@ -1,4 +1,4 @@
-from flask import render_template, flash, redirect, url_for, abort, request, send_file
+from flask import render_template, flash, redirect, url_for, abort, request, send_file, jsonify
 from flask_login import login_required, current_user
 from app import db
 from app.models import AttendanceRecord, User, LeaveRequest, Schedule
@@ -40,6 +40,34 @@ def dashboard():
                            on_leave_today=on_leave_today,
                            late_today=late_today,
                            records=recent_records)
+
+@bp.route('/calendar')
+@login_required
+@admin_required
+def calendar():
+    return render_template('admin/calendar.html', title='Calendario de Equipo')
+
+@bp.route('/calendar-events')
+@login_required
+@admin_required
+def calendar_events():
+    try:
+        approved_requests = db.session.query(LeaveRequest).join(User).filter(LeaveRequest.status == 'Aprobado').all()
+        
+        events = []
+        for req in approved_requests:
+            # FullCalendar's end date is exclusive, so add one day to make it inclusive
+            end_date = req.end_date + timedelta(days=1)
+            events.append({
+                'title': f"{req.employee.first_name} {req.employee.last_name}",
+                'start': req.start_date.isoformat(),
+                'end': end_date.isoformat(),
+                'allDay': True
+            })
+        return jsonify(events)
+    except Exception as e:
+        # Log the error e
+        return jsonify({'error': 'Could not fetch events'}), 500
 
 @bp.route('/leave_requests')
 @login_required
