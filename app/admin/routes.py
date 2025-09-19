@@ -298,21 +298,76 @@ def export_pdf():
         flash('Fechas de inicio y fin son requeridas para exportar.', 'danger')
         return redirect(url_for('admin.reports'))
 
-    start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
-    end_date = datetime.strptime(end_date_str, '%Y-%m-%d') + timedelta(days=1)
+    start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+    end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+    end_date_dt = datetime.combine(end_date, datetime.max.time())
 
-    records = db.session.query(AttendanceRecord, User).join(
+    # Get all records for the date range
+    records_query = db.session.query(AttendanceRecord, User).join(
         User, AttendanceRecord.user_id == User.id
     ).filter(
         AttendanceRecord.check_in_time >= start_date,
-        AttendanceRecord.check_in_time < end_date
-    ).order_by(AttendanceRecord.check_in_time.desc()).all()
+        AttendanceRecord.check_in_time < end_date_dt
+    ).order_by(User.username, AttendanceRecord.check_in_time)
+    
+    all_records = records_query.all()
 
-    if not records:
+    if not all_records:
         flash('No hay datos para exportar en el rango seleccionado.', 'info')
         return redirect(url_for('admin.reports'))
 
-    rendered_html = render_template('admin/report_pdf.html', records=records, start_date=start_date_str, end_date=end_date_str)
+    # --- Analysis Part for Summary ---
+    data = [{
+        'user_id': user.id,
+        'username': user.username,
+        'check_in': record.check_in_time,
+        'check_out': record.check_out_time,
+        'lunch_start': record.lunch_start_time,
+        'lunch_end': record.lunch_end_time,
+        'status': record.status
+    } for record, user in all_records]
+    df = pd.DataFrame(data)
+
+    df['work_duration'] = (df['check_out'] - df['check_in']).dt.total_seconds()
+    df['lunch_duration'] = (df['lunch_end'] - df['lunch_start']).dt.total_seconds().fillna(0)
+    df['worked_hours'] = (df['work_duration'] - df['lunch_duration']) / 3600
+
+    summary = df.groupby(['user_id', 'username']).agg(
+        dias_trabajados=('check_in', 'count'),
+        total_tardanzas=('status', lambda x: (x == 'Tarde').sum()),
+        horas_totales=('worked_hours', 'sum')
+    ).reset_index()
+
+    leave_requests = LeaveRequest.query.filter(
+        LeaveRequest.status == 'Aprobado',
+        LeaveRequest.start_date <= end_date,
+        LeaveRequest.end_date >= start_date
+    ).all()
+    
+    leave_summary = {}
+    for leave in leave_requests:
+        overlap_start = max(leave.start_date, start_date)
+        overlap_end = min(leave.end_date, end_date)
+        if overlap_start <= overlap_end:
+            days_on_leave = (overlap_end - overlap_start).days + 1
+            if leave.user_id not in leave_summary:
+                leave_summary[leave.user_id] = {'Vacaciones': 0, 'Enfermedad': 0, 'Permiso Personal': 0}
+            leave_summary[leave.user_id][leave.leave_type] += days_on_leave
+
+    summary['dias_vacaciones'] = summary['user_id'].map(lambda x: leave_summary.get(x, {}).get('Vacaciones', 0))
+    summary['dias_enfermedad'] = summary['user_id'].map(lambda x: leave_summary.get(x, {}).get('Enfermedad', 0))
+    
+    summary_stats = summary.to_dict('records')
+    # --- End of Analysis Part ---
+
+    rendered_html = render_template(
+        'admin/report_pdf.html', 
+        records=all_records, 
+        summary_stats=summary_stats,
+        start_date=start_date_str, 
+        end_date=end_date_str,
+        generation_date=date.today().strftime('%d-%m-%Y')
+    )
     pdf = HTML(string=rendered_html).write_pdf()
 
     return send_file(
