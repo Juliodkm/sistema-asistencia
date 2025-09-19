@@ -37,6 +37,9 @@ def create_app(config_name='default'):
     from app.admin import admin_bp
     app.register_blueprint(admin_bp, url_prefix='/admin')
 
+    from app.schedule import schedule_bp
+    app.register_blueprint(schedule_bp, url_prefix='/admin/schedules')
+
     # Import models to ensure they are known to Flask-Migrate
     from app import models
 

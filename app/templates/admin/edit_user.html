@@ -72,6 +72,18 @@
                         </select>
                     </div>
                     <div class="col-md-6 mb-3">
+                        <label for="schedule_id" class="form-label">Horario Asignado</label>
+                        <select class="form-select" id="schedule_id" name="schedule_id">
+                            <option value="">-- Sin Horario --</option>
+                            {% for schedule in schedules %}
+                                <option value="{{ schedule.id }}" {% if user.schedule_id == schedule.id %}selected{% endif %}>{{ schedule.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
                         <label for="password" class="form-label">Nueva Contraseña (Opcional)</label>
                         <input type="password" class="form-control" id="password" name="password">
                         <div class="form-text">Deje en blanco para no cambiar la contraseña.</div>

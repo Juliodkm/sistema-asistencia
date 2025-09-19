@@ -1,7 +1,7 @@
 from app import db, login
 from datetime import datetime, timezone
 from werkzeug.security import generate_password_hash, check_password_hash
-from sqlalchemy import Date, DateTime
+from sqlalchemy import Date, DateTime, Time, ForeignKey
 from flask import current_app
 from flask_login import UserMixin
 import jwt
@@ -9,6 +9,17 @@ import jwt
 @login.user_loader
 def load_user(id):
     return db.session.get(User, int(id))
+
+class Schedule(db.Model):
+    __tablename__ = 'schedules'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False, unique=True)
+    start_time = db.Column(Time, nullable=False)
+    end_time = db.Column(Time, nullable=False)
+    grace_period_minutes = db.Column(db.Integer, default=5, nullable=False)
+
+    def __repr__(self):
+        return f'<Schedule {self.name}>'
 
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
@@ -25,6 +36,9 @@ class User(UserMixin, db.Model):
     phone_number = db.Column(db.String(20), nullable=True)
     area = db.Column(db.String(50), nullable=True)
     department = db.Column(db.String(50), nullable=True)
+
+    schedule_id = db.Column(db.Integer, db.ForeignKey('schedules.id'), nullable=True)
+    schedule = db.relationship('Schedule', backref='employees')
     
     attendance_records = db.relationship('AttendanceRecord', backref='employee', lazy='dynamic')
     leave_requests = db.relationship('LeaveRequest', backref='employee', lazy='dynamic')
@@ -36,9 +50,8 @@ class User(UserMixin, db.Model):
         return check_password_hash(self.password_hash, password)
 
     def get_reset_password_token(self, expires_in=600):
-        # Note: datetime.timedelta is needed here. Assuming it's imported where used.
         return jwt.encode(
-            {'reset_password': self.id, 'exp': datetime.now(timezone.utc) + jwt.timedelta(seconds=expires_in)},
+            {'reset_password': self.id, 'exp': datetime.now(timezone.utc) + timedelta(seconds=expires_in)},
             current_app.config['SECRET_KEY'],
             algorithm='HS256'
         )

@@ -1,7 +1,7 @@
 from flask import render_template, flash, redirect, url_for, abort, request, send_file
 from flask_login import login_required, current_user
 from app import db
-from app.models import AttendanceRecord, User, LeaveRequest
+from app.models import AttendanceRecord, User, LeaveRequest, Schedule
 from app.admin import admin_bp as bp
 from functools import wraps
 from datetime import datetime, timedelta, date
@@ -86,10 +86,30 @@ def add_user():
 @login_required
 @admin_required
 def edit_user(user_id):
-    # ... (código existente de edit_user)
-    pass
     user = User.query.get_or_404(user_id)
-    return render_template('admin/edit_user.html', user=user, title='Editar Usuario')
+    schedules = Schedule.query.all()
+
+    if request.method == 'POST':
+        user.username = request.form['username']
+        user.email = request.form['email']
+        user.first_name = request.form['first_name']
+        user.last_name = request.form['last_name']
+        user.birth_date = datetime.strptime(request.form['birth_date'], '%Y-%m-%d').date() if request.form['birth_date'] else None
+        user.phone_number = request.form['phone_number']
+        user.area = request.form['area']
+        user.department = request.form['department']
+        user.role = request.form['role']
+        schedule_id = request.form.get('schedule_id')
+        user.schedule_id = int(schedule_id) if schedule_id else None
+
+        if request.form['password']:
+            user.set_password(request.form['password'])
+        
+        db.session.commit()
+        flash('Usuario actualizado con éxito.', 'success')
+        return redirect(url_for('admin.list_users'))
+
+    return render_template('admin/edit_user.html', user=user, schedules=schedules, title='Editar Usuario')
 
 @bp.route('/delete_user/<int:user_id>', methods=['POST'])
 @login_required

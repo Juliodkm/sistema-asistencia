@@ -57,6 +57,44 @@
             <a href="{{ url_for('dashboard.leave') }}" class="btn btn-info">Gestionar Vacaciones</a>
         </div>
 
+        <hr class="my-4">
+
+        <h2 class="h4">Mi Actividad Reciente (Últimos 7 Días)</h2>
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead class="thead-light">
+                    <tr>
+                        <th scope="col">Fecha</th>
+                        <th scope="col">Hora de Entrada</th>
+                        <th scope="col">Hora de Salida</th>
+                        <th scope="col">Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rec in history %}
+                    <tr>
+                        <td>{{ rec.check_in_time.strftime('%Y-%m-%d') }}</td>
+                        <td>{{ rec.check_in_time.strftime('%H:%M:%S') }}</td>
+                        <td>{{ rec.check_out_time.strftime('%H:%M:%S') if rec.check_out_time else 'N/A' }}</td>
+                        <td>
+                            {% if rec.status == 'A Tiempo' %}
+                                <span class="badge badge-success">{{ rec.status }}</span>
+                            {% elif rec.status == 'Tarde' %}
+                                <span class="badge badge-warning">{{ rec.status }}</span>
+                            {% else %}
+                                <span class="badge badge-info">{{ rec.status }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="text-center">No hay registros de actividad en los últimos 7 días.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
         <p style="margin-top: 30px;"><a href="{{ url_for('auth.logout') }}">Cerrar Sesión</a></p>
     </div>
 {% endblock %}

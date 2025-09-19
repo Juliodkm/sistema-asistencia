@@ -3,20 +3,33 @@ from flask_login import login_required, current_user
 from app.dashboard import bp
 from app.models import AttendanceRecord, User, LeaveRequest
 from app import db
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 from sqlalchemy import func
 
 @bp.route('/dashboard')
 @login_required
 def dashboard():
     today = date.today()
-    
+    seven_days_ago = today - timedelta(days=7)
+
+    # Registro de asistencia para el día actual
     attendance_record = AttendanceRecord.query.filter(
         AttendanceRecord.user_id == current_user.id,
         func.date(AttendanceRecord.check_in_time) == today
     ).first()
 
-    return render_template('dashboard/dashboard.html', title='Dashboard', record=attendance_record)
+    # Historial de asistencia de los últimos 7 días
+    attendance_history = AttendanceRecord.query.filter(
+        AttendanceRecord.user_id == current_user.id,
+        func.date(AttendanceRecord.check_in_time) >= seven_days_ago
+    ).order_by(AttendanceRecord.check_in_time.desc()).all()
+
+    return render_template(
+        'dashboard/dashboard.html', 
+        title='Dashboard', 
+        record=attendance_record, 
+        history=attendance_history
+    )
 
 @bp.route('/mark_attendance', methods=['POST'])
 @login_required
@@ -31,23 +44,28 @@ def mark_attendance():
     if attendance_record is None:
         # Check-in
         check_in_time = datetime.utcnow()
+        status = 'A Tiempo'  # Default status
+
+        # Dynamic status determination based on schedule
+        if current_user.schedule:
+            schedule = current_user.schedule
+            # Combine date and time for comparison
+            deadline_datetime = datetime.combine(
+                check_in_time.date(), 
+                schedule.start_time
+            ) + timedelta(minutes=schedule.grace_period_minutes)
+            
+            # Make check_in_time timezone-aware for comparison if needed, assuming UTC for now
+            if check_in_time > deadline_datetime:
+                status = 'Tarde'
         
-        # Define the official check-in time (8:05 AM)
-        official_check_in_time = time(8, 5)
-
-        # Determine the status
-        if check_in_time.time() <= official_check_in_time:
-            status = 'A Tiempo'
-        else:
-            status = 'Tarde'
-
         new_record = AttendanceRecord(
             employee=current_user, 
             check_in_time=check_in_time,
             status=status
         )
         db.session.add(new_record)
-        flash('¡Entrada marcada con éxito!', 'success')
+        flash(f'¡Entrada marcada con éxito! Estado: {status}', 'success')
     elif attendance_record.check_out_time is None:
         # Check-out
         attendance_record.check_out_time = datetime.utcnow()
