@@ -1,7 +1,7 @@
 from flask import render_template, flash, redirect, url_for, abort, request, send_file
 from flask_login import login_required, current_user
 from app import db
-from app.models import AttendanceRecord, User
+from app.models import AttendanceRecord, User, LeaveRequest
 from app.admin import admin_bp as bp
 from functools import wraps
 from datetime import datetime, timedelta, date
@@ -40,6 +40,30 @@ def dashboard():
                            on_leave_today=on_leave_today,
                            late_today=late_today,
                            records=recent_records)
+
+@bp.route('/leave_requests')
+@login_required
+@admin_required
+def leave_requests():
+    pending_requests = db.session.query(LeaveRequest, User).join(User).filter(LeaveRequest.status == 'Pendiente').all()
+    return render_template('admin/leave_requests.html', requests=pending_requests, title='Solicitudes de Ausencia')
+
+@bp.route('/process_leave/<int:request_id>', methods=['POST'])
+@login_required
+@admin_required
+def process_leave(request_id):
+    leave_request = LeaveRequest.query.get_or_404(request_id)
+    action = request.form.get('action')
+
+    if action == 'approve':
+        leave_request.status = 'Aprobado'
+        flash(f'Solicitud de {leave_request.employee.first_name} ha sido aprobada.', 'success')
+    elif action == 'reject':
+        leave_request.status = 'Rechazado'
+        flash(f'Solicitud de {leave_request.employee.first_name} ha sido rechazada.', 'warning')
+
+    db.session.commit()
+    return redirect(url_for('admin.leave_requests'))
 
 # User Management Routes
 @bp.route('/users')

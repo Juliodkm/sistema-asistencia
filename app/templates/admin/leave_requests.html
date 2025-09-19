@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid p-4">
+    <h1 class="h2 mb-4">Gestionar Solicitudes de Ausencia</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flashes">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <div class="card shadow">
+        <div class="card-header">
+            <h6 class="m-0 font-weight-bold text-primary">Solicitudes Pendientes</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th>Empleado</th>
+                            <th>Tipo de Ausencia</th>
+                            <th>Fecha de Inicio</th>
+                            <th>Fecha de Fin</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for leave_request, user in requests %}
+                        <tr>
+                            <td>{{ user.first_name }} {{ user.last_name }}</td>
+                            <td>{{ leave_request.leave_type }}</td>
+                            <td>{{ leave_request.start_date.strftime('%d-%m-%Y') }}</td>
+                            <td>{{ leave_request.end_date.strftime('%d-%m-%Y') }}</td>
+                            <td class="text-center">
+                                <form action="{{ url_for('admin.process_leave', request_id=leave_request.id) }}" method="POST" class="d-inline">
+                                    <button type="submit" name="action" value="approve" class="btn btn-success btn-sm">Aprobar</button>
+                                </form>
+                                <form action="{{ url_for('admin.process_leave', request_id=leave_request.id) }}" method="POST" class="d-inline">
+                                    <button type="submit" name="action" value="reject" class="btn btn-danger btn-sm">Rechazar</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center">No hay solicitudes de ausencia pendientes.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="mt-4">
+        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">Volver al Dashboard</a>
+    </div>
+</div>
+{% endblock %}
