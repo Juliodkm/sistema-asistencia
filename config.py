@@ -22,8 +22,10 @@ class TestingConfig(Config):
 
 class ProductionConfig(Config):
     """Production configuration."""
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
-        'postgresql://user:password@host/database'
+    DEBUG = False
+    # For production, these MUST be set in the environment
+    SECRET_KEY = os.environ.get('SECRET_KEY')
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') # Render sets this automatically
 
 # Dictionary to map configuration names to their respective classes
 config = {

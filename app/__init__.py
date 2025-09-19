@@ -1,3 +1,4 @@
+import os
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -14,7 +15,7 @@ login.login_view = 'auth.login'
 login.login_message = 'Por favor, inicia sesión para acceder a esta página.'
 login.login_message_category = 'info'
 
-def create_app(config_name='default'):
+def create_app(config_name=os.getenv('FLASK_CONFIG') or 'production'):
     """Application factory function."""
     app = Flask(__name__)
     
