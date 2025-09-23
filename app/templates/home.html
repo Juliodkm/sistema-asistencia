@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex flex-col items-center justify-center min-h-screen bg-gray-100 text-gray-800">
+    <div class="text-center p-10 bg-white rounded-lg shadow-xl">
+        <h1 class="text-5xl font-bold mb-4">Bienvenido al Sistema de Control de Asistencia</h1>
+        <p class="text-lg mb-8">
+            Gestiona la asistencia de tu equipo de manera eficiente y sencilla.
+        </p>
+        <div class="space-x-4">
+            <a href="{{ url_for('auth.login') }}" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg text-lg transition duration-300 ease-in-out">
+                Iniciar Sesión
+            </a>
+            <a href="{{ url_for('auth.register') }}" class="bg-green-500 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg text-lg transition duration-300 ease-in-out">
+                Registrarse
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

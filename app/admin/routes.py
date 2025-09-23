@@ -376,3 +376,81 @@ def export_pdf():
         as_attachment=True,
         download_name=f'reporte_asistencia_{start_date_str}_a_{end_date_str}.pdf'
     )
+
+@bp.route('/reports/charts-data')
+@login_required
+@admin_required
+def charts_data():
+    start_date_str = request.args.get('start_date')
+    end_date_str = request.args.get('end_date')
+
+    if not start_date_str or not end_date_str:
+        return jsonify({"error": "start_date and end_date are required"}), 400
+
+    try:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        end_date_dt = datetime.combine(end_date, datetime.max.time())
+
+        # --- Tardanzas por Departamento ---
+        attendance_records = db.session.query(AttendanceRecord, User).join(
+            User, AttendanceRecord.user_id == User.id
+        ).filter(
+            AttendanceRecord.check_in_time >= start_date,
+            AttendanceRecord.check_in_time < end_date_dt,
+            AttendanceRecord.status == 'Tarde'
+        ).all()
+
+        if not attendance_records:
+            tardanzas_por_departamento = {"labels": [], "data": []}
+        else:
+            df_tardanzas = pd.DataFrame([{
+                'department': user.department
+            } for record, user in attendance_records])
+            
+            tardanzas_counts = df_tardanzas['department'].value_counts()
+            tardanzas_por_departamento = {
+                "labels": tardanzas_counts.index.tolist(),
+                "data": tardanzas_counts.values.tolist()
+            }
+
+        # --- Distribución de Ausencias ---
+        leave_requests = LeaveRequest.query.filter(
+            LeaveRequest.status == 'Aprobado',
+            LeaveRequest.start_date <= end_date,
+            LeaveRequest.end_date >= start_date
+        ).all()
+
+        if not leave_requests:
+            distribucion_ausencias = {"labels": [], "data": []}
+        else:
+            leave_data = []
+            for req in leave_requests:
+                # Calculate overlap days
+                overlap_start = max(req.start_date, start_date)
+                overlap_end = min(req.end_date, end_date)
+                if overlap_start <= overlap_end:
+                    days = (overlap_end - overlap_start).days + 1
+                    for _ in range(days):
+                        leave_data.append({'leave_type': req.leave_type})
+            
+            if not leave_data:
+                 distribucion_ausencias = {"labels": [], "data": []}
+            else:
+                df_leaves = pd.DataFrame(leave_data)
+                ausencias_counts = df_leaves['leave_type'].value_counts()
+                distribucion_ausencias = {
+                    "labels": ausencias_counts.index.tolist(),
+                    "data": ausencias_counts.values.tolist()
+                }
+
+        return jsonify({
+            "tardanzas_por_departamento": tardanzas_por_departamento,
+            "distribucion_ausencias": distribucion_ausencias
+        })
+
+    except ValueError:
+        return jsonify({"error": "Invalid date format. Use YYYY-MM-DD."}), 400
+    except Exception as e:
+        # Log error e
+        return jsonify({"error": "An internal error occurred."}), 500

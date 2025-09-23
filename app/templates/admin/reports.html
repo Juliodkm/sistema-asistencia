@@ -84,6 +84,33 @@
     </div>
     {% endif %}
 
+    {# --- Nueva Sección de Gráficos --- #}
+    {% if start_date and end_date and summary_stats %}
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    Tardanzas por Departamento
+                </div>
+                <div class="card-body">
+                    <canvas id="tardanzasChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    Distribución de Ausencias
+                </div>
+                <div class="card-body">
+                    <canvas id="ausenciasChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+
     <div class="card">
         <div class="card-header">
             Registro Detallado
@@ -147,4 +174,99 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const tardanzasCanvas = document.getElementById('tardanzasChart');
+    const ausenciasCanvas = document.getElementById('ausenciasChart');
+
+    // Solo intentar crear los gráficos si los canvas existen y hay un reporte generado
+    if (tardanzasCanvas && ausenciasCanvas && '{{ start_date }}' && '{{ end_date }}') {
+        const startDate = '{{ start_date }}';
+        const endDate = '{{ end_date }}';
+        const url = `/admin/reports/charts-data?start_date=${startDate}&end_date=${endDate}`;
+
+        fetch(url)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok ' + response.statusText);
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Gráfico de Tardanzas por Departamento (Barras)
+                const tardanzasData = data.tardanzas_por_departamento;
+                if (tardanzasData && tardanzasData.labels && tardanzasData.data) {
+                    new Chart(tardanzasCanvas, {
+                        type: 'bar',
+                        data: {
+                            labels: tardanzasData.labels,
+                            datasets: [{
+                                label: 'Número de Tardanzas',
+                                data: tardanzasData.data,
+                                backgroundColor: 'rgba(255, 159, 64, 0.5)',
+                                borderColor: 'rgba(255, 159, 64, 1)',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        stepSize: 1
+                                    }
+                                }
+                            },
+                            responsive: true,
+                            maintainAspectRatio: false
+                        }
+                    });
+                }
+
+                // Gráfico de Distribución de Ausencias (Dona)
+                const ausenciasData = data.distribucion_ausencias;
+                if (ausenciasData && ausenciasData.labels && ausenciasData.data) {
+                    new Chart(ausenciasCanvas, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ausenciasData.labels,
+                            datasets: [{
+                                label: 'Días de Ausencia',
+                                data: ausenciasData.data,
+                                backgroundColor: [
+                                    'rgba(54, 162, 235, 0.5)',
+                                    'rgba(255, 99, 132, 0.5)',
+                                    'rgba(75, 192, 192, 0.5)',
+                                    'rgba(255, 206, 86, 0.5)',
+                                    'rgba(153, 102, 255, 0.5)'
+                                ],
+                                borderColor: [
+                                    'rgba(54, 162, 235, 1)',
+                                    'rgba(255, 99, 132, 1)',
+                                    'rgba(75, 192, 192, 1)',
+                                    'rgba(255, 206, 86, 1)',
+                                    'rgba(153, 102, 255, 1)'
+                                ],
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false
+                        }
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching chart data:', error);
+                tardanzasCanvas.getContext('2d').fillText('Error al cargar datos del gráfico.', 10, 50);
+                ausenciasCanvas.getContext('2d').fillText('Error al cargar datos del gráfico.', 10, 50);
+            });
+    }
+});
+</script>
 {% endblock %}

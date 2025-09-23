@@ -15,7 +15,7 @@ login.login_view = 'auth.login'
 login.login_message = 'Por favor, inicia sesión para acceder a esta página.'
 login.login_message_category = 'info'
 
-def create_app(config_name=os.getenv('FLASK_CONFIG') or 'production'):
+def create_app(config_name='development'):
     """Application factory function."""
     app = Flask(__name__)
     
