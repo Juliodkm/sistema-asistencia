@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Actualización de tu Solicitud de Ausencia</title>
+</head>
+<body>
+    <p>Hola {{ user.first_name }},</p>
+    <p>
+        El estado de tu solicitud de ausencia ha sido actualizado a: <strong>{{ request.status }}</strong>.
+    </p>
+    <p>
+        <strong>Detalles de la solicitud:</strong><br>
+        Tipo: {{ request.leave_type }}<br>
+        Desde: {{ request.start_date.strftime('%d-%m-%Y') }}<br>
+        Hasta: {{ request.end_date.strftime('%d-%m-%Y') }}
+    </p>
+    {% if request.status == 'Rechazado' %}
+    <p>
+        Si tienes alguna pregunta, por favor, contacta con el departamento de recursos humanos.
+    </p>
+    {% endif %}
+    <br>
+    <p>Saludos,</p>
+    <p>El Equipo de Administración</p>
+</body>
+</html>

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Nueva Solicitud de Ausencia</title>
+</head>
+<body>
+    <p>Hola Administrador,</p>
+    <p>
+        El empleado <strong>{{ user.first_name }} {{ user.last_name }}</strong> ha enviado una nueva solicitud de ausencia.
+    </p>
+    <p>
+        Tipo de Ausencia: {{ request.leave_type }}<br>
+        Desde: {{ request.start_date.strftime('%d-%m-%Y') }}<br>
+        Hasta: {{ request.end_date.strftime('%d-%m-%Y') }}<br>
+        Razón: {{ request.reason }}
+    </p>
+    <p>
+        Puedes revisar y procesar la solicitud en el panel de administración.
+    </p>
+    <a href="{{ url_for('admin.leave_requests', _external=True) }}">Ir al Panel de Ausencias</a>
+    <br>
+    <p>Gracias,</p>
+    <p>El Sistema de Control de Asistencia</p>
+</body>
+</html>

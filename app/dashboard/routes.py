@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from app.dashboard import bp
 from app.models import AttendanceRecord, User, LeaveRequest
 from app import db
+from app.email import send_email
 from datetime import date, datetime, time, timedelta
 from sqlalchemy import func
 
@@ -133,6 +134,13 @@ def leave():
         )
         db.session.add(new_request)
         db.session.commit()
+
+        # Send notification email to admin
+        send_email('chocajulio@gmail.com', 
+                   'Nueva Solicitud de Ausencia',
+                   'email/new_leave_request.html',
+                   user=current_user, request=new_request)
+
         flash('Solicitud de ausencia enviada con éxito.', 'success')
         return redirect(url_for('dashboard.leave'))
 

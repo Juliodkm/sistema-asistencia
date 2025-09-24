@@ -6,6 +6,11 @@ class Config:
     """Base configuration class. Contains shared configuration."""
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'una-clave-secreta-muy-dificil-de-adivinar'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    MAIL_SERVER = 'smtp.gmail.com'
+    MAIL_PORT = 587
+    MAIL_USE_TLS = True
+    MAIL_USERNAME = os.environ.get('MAIL_USERNAME') or 'chocajulio@gmail.com'
+    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
     # Add other shared configurations here
 
 class DevelopmentConfig(Config):

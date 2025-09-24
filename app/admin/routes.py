@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from app import db
 from app.models import AttendanceRecord, User, LeaveRequest, Schedule
 from app.admin import admin_bp as bp
+from app.email import send_email
 from functools import wraps
 from datetime import datetime, timedelta, date
 from sqlalchemy import func
@@ -91,6 +92,13 @@ def process_leave(request_id):
         flash(f'Solicitud de {leave_request.employee.first_name} ha sido rechazada.', 'warning')
 
     db.session.commit()
+
+    # Notify employee of the status change
+    send_email(leave_request.employee.email,
+               'Actualización sobre tu Solicitud de Ausencia',
+               'email/leave_status_update.html',
+               user=leave_request.employee, request=leave_request)
+
     return redirect(url_for('admin.leave_requests'))
 
 # User Management Routes
